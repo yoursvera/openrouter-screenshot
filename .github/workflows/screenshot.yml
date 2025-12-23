@@ -24,7 +24,7 @@ jobs:
           npm install playwright
           npx playwright install chromium
 
-      - name: Take screenshot
+      - name: Take screenshot (click show more)
         run: |
           node << 'EOF'
           const { chromium } = require('playwright');
@@ -35,11 +35,22 @@ jobs:
               viewport: { width: 1440, height: 900 }
             });
 
+            // 1. 打开页面
             await page.goto('https://openrouter.ai/rankings', {
               waitUntil: 'networkidle',
               timeout: 60000
             });
 
+            // 2. 等待 Show more 按钮出现（最多等 10 秒）
+            await page.waitForSelector('text=Show more', { timeout: 10000 });
+
+            // 3. 点击 Show more
+            await page.click('text=Show more');
+
+            // 4. 等待内容加载完成（给网页一点反应时间）
+            await page.waitForTimeout(3000);
+
+            // 5. 截图
             const date = new Date().toISOString().slice(0, 10);
             await page.screenshot({
               path: `openrouter_ranking_${date}.png`,
@@ -49,6 +60,7 @@ jobs:
             await browser.close();
           })();
           EOF
+
 
       - name: Upload screenshot
         uses: actions/upload-artifact@v4
