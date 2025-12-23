@@ -1,0 +1,57 @@
+name: Weekly OpenRouter Screenshot
+
+on:
+  schedule:
+    - cron: "0 2 * * 3"  # 每周三 UTC 02:00
+  workflow_dispatch:
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install playwright
+          npx playwright install chromium
+
+      - name: Take screenshot
+        run: |
+          node << 'EOF'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage({
+              viewport: { width: 1440, height: 900 }
+            });
+
+            await page.goto('https://openrouter.ai/rankings', {
+              waitUntil: 'networkidle',
+              timeout: 60000
+            });
+
+            const date = new Date().toISOString().slice(0, 10);
+            await page.screenshot({
+              path: `openrouter_ranking_${date}.png`,
+              fullPage: true
+            });
+
+            await browser.close();
+          })();
+          EOF
+
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: openrouter-ranking
+          path: openrouter_ranking_*.png
