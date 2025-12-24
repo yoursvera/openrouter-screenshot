@@ -2,7 +2,7 @@ name: Weekly OpenRouter Rankings Screenshot
 
 on:
   schedule:
-    # 每周三 UTC 09:00（中国 / 新加坡时间 17:00）
+    # 每周三 UTC 09:00 = 北京 / 新加坡时间 17:00
     - cron: "0 9 * * 3"
   workflow_dispatch:
 
@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -49,14 +51,11 @@ jobs:
               await page.waitForTimeout(3000);
             }
 
-            // 3. 定位排行榜主体区域
-            // 说明：OpenRouter 排行榜是页面中最大的 table / list 区块
+            // 3. 定位排行榜主体区域（不含页头页脚）
             const rankingsSection = page.locator('main');
-
-            // 确保内容加载完成
             await rankingsSection.waitFor({ timeout: 10000 });
 
-            // 4. 只截排行榜区域
+            // 4. 截图
             const date = new Date().toISOString().slice(0, 10);
             await rankingsSection.screenshot({
               path: `openrouter_ranking_${date}.png`
@@ -66,11 +65,21 @@ jobs:
           })();
           EOF
 
-      - name: Upload screenshot
+      - name: Save screenshot permanently to GitHub repo
+        run: |
+          mkdir -p screenshots
+          mv openrouter_ranking_*.png screenshots/
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add screenshots
+          git commit -m "Add OpenRouter ranking screenshot"
+          git push
+
+      - name: Upload screenshot as artifact
         uses: actions/upload-artifact@v4
         with:
           name: openrouter-ranking
-          path: openrouter_ranking_*.png
+          path: screenshots/openrouter_ranking_*.png
 
       - name: Send screenshot by email
         uses: dawidd6/action-send-mail@v3
@@ -84,7 +93,8 @@ jobs:
           body: |
             Hi,
 
-            Attached is the latest OpenRouter rankings screenshot (rankings only).
+            Attached is the latest OpenRouter rankings screenshot.
+            The screenshot is also permanently saved in the GitHub repository.
 
             This email was sent automatically.
 
@@ -92,4 +102,4 @@ jobs:
             Your GitHub automation bot
           to: ${{ secrets.EMAIL_TO }}
           from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
-          attachments: openrouter_ranking_*.png
+          attachments: screens
