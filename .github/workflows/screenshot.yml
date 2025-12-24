@@ -1,8 +1,9 @@
-name: Weekly OpenRouter Screenshot
+name: Weekly OpenRouter Rankings Screenshot
 
 on:
   schedule:
-    - cron: "0 2 * * 3"  # 每周三 UTC 02:00
+    # 每周三 UTC 02:00（中国 / 新加坡时间 10:00）
+    - cron: "0 2 * * 3"
   workflow_dispatch:
 
 jobs:
@@ -24,7 +25,7 @@ jobs:
           npm install playwright
           npx playwright install chromium
 
-      - name: Take screenshot (click show more)
+      - name: Take rankings screenshot only
         run: |
           node << 'EOF'
           const { chromium } = require('playwright');
@@ -41,29 +42,54 @@ jobs:
               timeout: 60000
             });
 
-            // 2. 等待 Show more 按钮出现（最多等 10 秒）
-            await page.waitForSelector('text=Show more', { timeout: 10000 });
+            // 2. 点击 Show more（如果存在）
+            const showMore = page.locator('text=Show more');
+            if (await showMore.count() > 0) {
+              await showMore.first().click();
+              await page.waitForTimeout(3000);
+            }
 
-            // 3. 点击 Show more
-            await page.click('text=Show more');
+            // 3. 定位排行榜主体区域
+            // 说明：OpenRouter 排行榜是页面中最大的 table / list 区块
+            const rankingsSection = page.locator('main');
 
-            // 4. 等待内容加载完成（给网页一点反应时间）
-            await page.waitForTimeout(3000);
+            // 确保内容加载完成
+            await rankingsSection.waitFor({ timeout: 10000 });
 
-            // 5. 截图
+            // 4. 只截排行榜区域
             const date = new Date().toISOString().slice(0, 10);
-            await page.screenshot({
-              path: `openrouter_ranking_${date}.png`,
-              fullPage: true
+            await rankingsSection.screenshot({
+              path: `openrouter_ranking_${date}.png`
             });
 
             await browser.close();
           })();
           EOF
 
-
       - name: Upload screenshot
         uses: actions/upload-artifact@v4
         with:
           name: openrouter-ranking
           path: openrouter_ranking_*.png
+
+      - name: Send screenshot by email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: OpenRouter Rankings – Weekly Screenshot
+          body: |
+            Hi,
+
+            Attached is the latest OpenRouter rankings screenshot (rankings only).
+
+            This email was sent automatically.
+
+            Best regards,
+            Your GitHub automation bot
+          to: ${{ secrets.EMAIL_TO }}
+          from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
+          attachments: openrouter_ranking_*.png
