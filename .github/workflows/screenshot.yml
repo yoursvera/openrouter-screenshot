@@ -98,4 +98,4 @@ jobs:
           from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
           attachments: |
             openrouter_ranking_*.png
-            kat_coder_screenshot_*.png  # 两个截图都作为附件
+            kat_coder_screenshot_*.png  # 确保这里是正确的路径，确保两个截图都包含
