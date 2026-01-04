@@ -1,36 +1,67 @@
-      - name: Take screenshot (click show more)
+name: OpenRouter Rankings Screenshot
+
+on:
+  workflow_dispatch:  # 只允许手动触发
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
         run: |
-          node << 'EOF'
-          const { chromium } = require('playwright');
+          npm init -y
+          npm install playwright
+          npx playwright install chromium
 
-          (async () => {
-            const browser = await chromium.launch();
-            const page = await browser.newPage({
-              viewport: { width: 1440, height: 900 }
-            });
+      - name: Take rankings screenshot only
+        run: |
+          echo "const { chromium } = require('playwright');" > script.js
+          echo "(async () => {" >> script.js
+          echo "  const browser = await chromium.launch();" >> script.js
+          echo "  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });" >> script.js
+          echo "  await page.goto('https://openrouter.ai/rankings', { waitUntil: 'networkidle', timeout: 60000 });" >> script.js
+          echo "  const showMore = page.locator('text=Show more');" >> script.js
+          echo "  if (await showMore.count() > 0) {" >> script.js
+          echo "    await showMore.first().click();" >> script.js
+          echo "    await page.waitForTimeout(3000);" >> script.js
+          echo "  }" >> script.js
+          echo "  const rankingsSection = page.locator('main');" >> script.js
+          echo "  await rankingsSection.waitFor({ timeout: 10000 });" >> script.js
+          echo "  const date = new Date().toISOString().slice(0, 10);" >> script.js
+          echo "  await rankingsSection.screenshot({ path: \`openrouter_ranking_\${date}.png\` });" >> script.js
+          echo "  await browser.close();" >> script.js
+          echo "})();" >> script.js
+          node script.js
 
-            // 1. 打开页面
-            await page.goto('https://openrouter.ai/rankings', {
-              waitUntil: 'networkidle',
-              timeout: 60000
-            });
+      - name: Send screenshot by email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: OpenRouter Rankings – Screenshot
+          body: |
+            Hi,
 
-            // 2. 等待 Show more 按钮出现（最多等 10 秒）
-            await page.waitForSelector('text=Show more', { timeout: 10000 });
+            Attached is the latest OpenRouter rankings screenshot.
 
-            // 3. 点击 Show more
-            await page.click('text=Show more');
+            This email was sent automatically.
 
-            // 4. 等待内容加载完成（给网页一点反应时间）
-            await page.waitForTimeout(3000);
-
-            // 5. 截图
-            const date = new Date().toISOString().slice(0, 10);
-            await page.screenshot({
-              path: `openrouter_ranking_${date}.png`,
-              fullPage: true
-            });
-
-            await browser.close();
-          })();
-          EOF
+            Best regards,
+            Your GitHub automation bot
+          to: ${{ secrets.EMAIL_TO }}
+          from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
+          attachments: openrouter_ranking_*.png
