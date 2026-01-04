@@ -2,8 +2,8 @@ name: Weekly OpenRouter Rankings Screenshot
 
 on:
   schedule:
-    # 每周一 UTC 08:45 = 北京 / 新加坡时间 16:45
-    - cron: "45 8 * * 1"
+    # 每周日 UTC 08:46 = 北京 / 新加坡时间 16:46
+    - cron: "46 8 * * 0"
   workflow_dispatch:
 
 jobs:
