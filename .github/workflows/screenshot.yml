@@ -24,33 +24,59 @@ jobs:
           npm install playwright
           npx playwright install chromium
 
-      - name: Take rankings screenshot only
+      # 截取 https://openrouter.ai/rankings 页面截图
+      - name: Take OpenRouter rankings screenshot
         run: |
-          echo "const { chromium } = require('playwright');" > script.js
-          echo "(async () => {" >> script.js
-          echo "  const browser = await chromium.launch();" >> script.js
-          echo "  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });" >> script.js
-          echo "  await page.goto('https://openrouter.ai/rankings', { waitUntil: 'networkidle', timeout: 60000 });" >> script.js
-          echo "  const showMore = page.locator('text=Show more');" >> script.js
-          echo "  if (await showMore.count() > 0) {" >> script.js
-          echo "    await showMore.first().click();" >> script.js
-          echo "    await page.waitForTimeout(3000);" >> script.js
-          echo "  }" >> script.js
-          echo "  const rankingsSection = page.locator('main');" >> script.js
-          echo "  await rankingsSection.waitFor({ timeout: 10000 });" >> script.js
-          echo "  const date = new Date().toISOString().slice(0, 10);" >> script.js
-          echo "  await rankingsSection.screenshot({ path: \`openrouter_ranking_\${date}.png\` });" >> script.js
-          echo "  await browser.close();" >> script.js
-          echo "})();" >> script.js
-          node script.js
+          echo "const { chromium } = require('playwright');" > script_rankings.js
+          echo "(async () => {" >> script_rankings.js
+          echo "  const browser = await chromium.launch();" >> script_rankings.js
+          echo "  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });" >> script_rankings.js
+          echo "  await page.goto('https://openrouter.ai/rankings', { waitUntil: 'networkidle', timeout: 60000 });" >> script_rankings.js
+          echo "  const showMore = page.locator('text=Show more');" >> script_rankings.js
+          echo "  if (await showMore.count() > 0) {" >> script_rankings.js
+          echo "    await showMore.first().click();" >> script_rankings.js
+          echo "    await page.waitForTimeout(3000);" >> script_rankings.js
+          echo "  }" >> script_rankings.js
+          echo "  const rankingsSection = page.locator('main');" >> script_rankings.js
+          echo "  await rankingsSection.waitFor({ timeout: 10000 });" >> script_rankings.js
+          echo "  const date = new Date().toISOString().slice(0, 10);" >> script_rankings.js
+          echo "  await rankingsSection.screenshot({ path: \`openrouter_ranking_\${date}.png\` });" >> script_rankings.js
+          echo "  await browser.close();" >> script_rankings.js
+          echo "})();" >> script_rankings.js
+          node script_rankings.js
 
-      - name: Upload screenshot as artifact
+      # 截取 https://openrouter.ai/kwaipilot/kat-coder-pro:free/apps 页面截图
+      - name: Take Kwaipilot Kat-Coder-Pro screenshot
+        run: |
+          echo "const { chromium } = require('playwright');" > script_kat_coder.js
+          echo "(async () => {" >> script_kat_coder.js
+          echo "  const browser = await chromium.launch();" >> script_kat_coder.js
+          echo "  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });" >> script_kat_coder.js
+          echo "  await page.goto('https://openrouter.ai/kwaipilot/kat-coder-pro:free/apps', { waitUntil: 'networkidle', timeout: 60000 });" >> script_kat_coder.js
+          echo "  const showMore = page.locator('text=Show more');" >> script_kat_coder.js
+          echo "  if (await showMore.count() > 0) {" >> script_kat_coder.js
+          echo "    await showMore.first().click();" >> script_kat_coder.js
+          echo "    await page.waitForTimeout(3000);" >> script_kat_coder.js
+          echo "  }" >> script_kat_coder.js
+          echo "  const katCoderSection = page.locator('main');" >> script_kat_coder.js
+          echo "  await katCoderSection.waitFor({ timeout: 10000 });" >> script_kat_coder.js
+          echo "  const date = new Date().toISOString().slice(0, 10);" >> script_kat_coder.js
+          echo "  await katCoderSection.screenshot({ path: \`kat_coder_screenshot_\${date}.png\` });" >> script_kat_coder.js
+          echo "  await browser.close();" >> script_kat_coder.js
+          echo "})();" >> script_kat_coder.js
+          node script_kat_coder.js
+
+      # 上传两个截图作为 artifact
+      - name: Upload screenshots as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: openrouter-ranking
-          path: openrouter_ranking_*.png  # 确保这个路径与截图文件名匹配
+          name: openrouter-ranking-and-kat-coder
+          path: |
+            openrouter_ranking_*.png
+            kat_coder_screenshot_*.png
 
-      - name: Send screenshot by email
+      # 发送两个截图（openrouter_ranking_*.png 和 kat_coder_screenshot_*.png）到邮箱
+      - name: Send screenshots by email
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -58,11 +84,11 @@ jobs:
           secure: true
           username: ${{ secrets.EMAIL_USERNAME }}  # 你的 Gmail 地址
           password: ${{ secrets.EMAIL_PASSWORD }}  # 你的 Gmail 应用专用密码
-          subject: OpenRouter Rankings – Screenshot
+          subject: OpenRouter Rankings & Kwaipilot Kat-Coder-Pro Screenshots
           body: |
             Hi,
 
-            Attached is the latest OpenRouter rankings screenshot.
+            Attached are the latest OpenRouter rankings and Kwaipilot Kat-Coder-Pro screenshots.
 
             This email was sent automatically.
 
@@ -70,4 +96,6 @@ jobs:
             Your GitHub automation bot
           to: ${{ secrets.EMAIL_TO }}  # 目标邮箱地址
           from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
-          attachments: openrouter_ranking_*.png  # 附件路径
+          attachments: |
+            openrouter_ranking_*.png
+            kat_coder_screenshot_*.png  # 两个截图都作为附件
