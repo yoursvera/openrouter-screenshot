@@ -44,14 +44,20 @@ jobs:
           echo "})();" >> script.js
           node script.js
 
+      - name: Upload screenshot as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openrouter-ranking
+          path: openrouter_ranking_*.png  # 确保这个路径与截图文件名匹配
+
       - name: Send screenshot by email
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
+          username: ${{ secrets.EMAIL_USERNAME }}  # 你的 Gmail 地址
+          password: ${{ secrets.EMAIL_PASSWORD }}  # 你的 Gmail 应用专用密码
           subject: OpenRouter Rankings – Screenshot
           body: |
             Hi,
@@ -62,6 +68,6 @@ jobs:
 
             Best regards,
             Your GitHub automation bot
-          to: ${{ secrets.EMAIL_TO }}
+          to: ${{ secrets.EMAIL_TO }}  # 目标邮箱地址
           from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
-          attachments: openrouter_ranking_*.png
+          attachments: openrouter_ranking_*.png  # 附件路径
