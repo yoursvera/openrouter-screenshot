@@ -1,7 +1,9 @@
 name: OpenRouter Rankings Screenshot
 
 on:
-  workflow_dispatch:  # 只允许手动触发
+  schedule:
+    # 每周一北京时间10:00 AM触发（即每周一 2:00 AM UTC）
+    - cron: '0 2 * * 1'  # 每周一 UTC 02:00
 
 jobs:
   screenshot:
