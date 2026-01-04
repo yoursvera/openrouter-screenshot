@@ -66,17 +66,25 @@ jobs:
           echo "})();" >> script_kat_coder.js
           node script_kat_coder.js
 
+      # 获取当前日期，格式为 yyyy-mm-dd
+      - name: Get current date
+        id: current_date
+        run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      # 创建包含日期的 ZIP 文件
+      - name: Zip screenshots with date
+        run: |
+          zip screenshots_${{ env.DATE }}.zip openrouter_ranking_*.png kat_coder_screenshot_*.png
+
       # 上传两个截图作为 artifact
       - name: Upload screenshots as artifact
         uses: actions/upload-artifact@v4
         with:
           name: openrouter-ranking-and-kat-coder
-          path: |
-            openrouter_ranking_*.png
-            kat_coder_screenshot_*.png
+          path: screenshots_${{ env.DATE }}.zip
 
-      # 发送两个截图（openrouter_ranking_*.png 和 kat_coder_screenshot_*.png）到邮箱
-      - name: Send screenshots by email
+      # 发送 ZIP 文件作为附件到邮箱
+      - name: Send ZIP file by email
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -88,7 +96,7 @@ jobs:
           body: |
             Hi,
 
-            Attached are the latest OpenRouter rankings and Kwaipilot Kat-Coder-Pro screenshots.
+            Attached is a ZIP file containing the latest OpenRouter rankings and Kwaipilot Kat-Coder-Pro screenshots.
 
             This email was sent automatically.
 
@@ -96,6 +104,4 @@ jobs:
             Your GitHub automation bot
           to: ${{ secrets.EMAIL_TO }}  # 目标邮箱地址
           from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
-          attachments: |
-            openrouter_ranking_*.png
-            kat_coder_screenshot_*.png  # 确保这里是正确的路径，确保两个截图都包含
+          attachments: screenshots_${{ env.DATE }}.zip  # 发送带日期的 ZIP 文件
