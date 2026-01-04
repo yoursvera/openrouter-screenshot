@@ -1,10 +1,7 @@
-name: Weekly OpenRouter Rankings Screenshot
+name: OpenRouter Rankings Screenshot
 
 on:
-  schedule:
-    # 每周日 UTC 08:46 = 北京 / 新加坡时间 16:46
-    - cron: "46 8 * * 0"
-  workflow_dispatch:
+  workflow_dispatch:  # 只允许手动触发
 
 jobs:
   screenshot:
@@ -29,26 +26,42 @@ jobs:
 
       - name: Take rankings screenshot only
         run: |
-          node << 'EOF'
-          const { chromium } = require('playwright');
+          echo "const { chromium } = require('playwright');" > script.js
+          echo "(async () => {" >> script.js
+          echo "  const browser = await chromium.launch();" >> script.js
+          echo "  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });" >> script.js
+          echo "  await page.goto('https://openrouter.ai/rankings', { waitUntil: 'networkidle', timeout: 60000 });" >> script.js
+          echo "  const showMore = page.locator('text=Show more');" >> script.js
+          echo "  if (await showMore.count() > 0) {" >> script.js
+          echo "    await showMore.first().click();" >> script.js
+          echo "    await page.waitForTimeout(3000);" >> script.js
+          echo "  }" >> script.js
+          echo "  const rankingsSection = page.locator('main');" >> script.js
+          echo "  await rankingsSection.waitFor({ timeout: 10000 });" >> script.js
+          echo "  const date = new Date().toISOString().slice(0, 10);" >> script.js
+          echo "  await rankingsSection.screenshot({ path: \`openrouter_ranking_\${date}.png\` });" >> script.js
+          echo "  await browser.close();" >> script.js
+          echo "})();" >> script.js
+          node script.js
 
-          (async () => {
-            const browser = await chromium.launch();
-            const page = await browser.newPage({
-              viewport: { width: 1440, height: 900 }
-            });
+      - name: Send screenshot by email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: OpenRouter Rankings – Screenshot
+          body: |
+            Hi,
 
-            // 1. 打开页面
-            await page.goto('https://openrouter.ai/rankings', {
-              waitUntil: 'networkidle',
-              timeout: 60000
-            });
+            Attached is the latest OpenRouter rankings screenshot.
 
-            // 2. 点击 Show more（如果存在）
-            const showMore = page.locator('text=Show more');
-            if (await showMore.count() > 0) {
-              await showMore.first().click();
-              await page.waitForTimeout(3000);
-            }
+            This email was sent automatically.
 
-            // 3.
+            Best regards,
+            Your GitHub automation bot
+          to: ${{ secrets.EMAIL_TO }}
+          from: OpenRouter Bot <${{ secrets.EMAIL_USERNAME }}>
+          attachments: openrouter_ranking_*.png
